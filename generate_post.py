@@ -3,12 +3,16 @@ import os
 import re
 from datetime import datetime
 import random
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # OpenAI API Key (stored in GitHub Secrets)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Set up OpenAI API key
-openai.api_key = OPENAI_API_KEY
+client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Define the prompt for AI article generation
 def generate_article():
@@ -18,13 +22,20 @@ def generate_article():
     Make it SEO-friendly and informative.
     """
     
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "system", "content": "You are a professional mining and jewelry blogger."},
-                  {"role": "user", "content": prompt}]
-    )
-    
-    content = response["choices"][0]["message"]["content"]
+    try:
+        logging.info("Generating AI article...")
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": "You are a professional mining and jewelry blogger."},
+                      {"role": "user", "content": prompt}]
+        )
+        
+        content = response.choices[0].message.content
+        logging.info("Article generated successfully.")
+        
+    except Exception as e:
+        logging.error(f"Error generating article: {e}")
+        return "Error generating article."
     
     # Append a relevant link to a real website
     reference_links = [
@@ -80,17 +91,22 @@ def save_article(content):
     
     filename = f"_posts/{today}-{filename_title}.md"
     
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(f"---\n")
-        f.write(f"title: '{title}'\n")
-        f.write(f"date: {today}\n")
-        f.write(f"categories: {category}\n")
-        f.write(f"---\n\n")
-        f.write(content)
-
-    print(f"✅ Article saved: {filename}")
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"---\n")
+            f.write(f"title: '{title}'\n")
+            f.write(f"date: {today}\n")
+            f.write(f"categories: {category}\n")
+            f.write(f"---\n\n")
+            f.write(content)
+        logging.info(f"✅ Article saved: {filename}")
+    except Exception as e:
+        logging.error(f"Error saving article: {e}")
 
 # Run the script
 if __name__ == "__main__":
     article_content = generate_article()
-    save_article(article_content)
+    if "Error generating article." not in article_content:
+        save_article(article_content)
+    else:
+        logging.error("Skipping saving due to article generation failure.")
