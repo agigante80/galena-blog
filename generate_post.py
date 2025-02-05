@@ -6,7 +6,7 @@ import random
 import logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='script.log', filemode='a')
 
 # OpenAI API Key (stored in GitHub Secrets)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -105,8 +105,10 @@ def save_article(content):
 
 # Run the script
 if __name__ == "__main__":
+    logging.info("Script execution started.")
     article_content = generate_article()
     if "Error generating article." not in article_content:
         save_article(article_content)
     else:
         logging.error("Skipping saving due to article generation failure.")
+    logging.info("Script execution finished.")
