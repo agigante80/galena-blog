@@ -66,6 +66,20 @@ jobs:
             echo "🚀 Changes pushed successfully!"
           fi
 
+      - name: Commit CSV log changes
+        run: |
+          git add articles_log.csv
+          if git diff --staged --quiet; then
+            echo "🚫 No new CSV changes to commit."
+          else
+            echo "✅ Committing new CSV log..."
+            git commit -m "📊 Update articles_log.csv with new post log"
+            git push https://x-access-token:${GH_PAT}@github.com/agigante80/galena-blog.git main
+            echo "🚀 CSV log changes pushed successfully!"
+          fi
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+
       - name: Confirm Successful Execution
         run: |
           echo "✅ Workflow completed successfully!"
