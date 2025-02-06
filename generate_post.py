@@ -147,7 +147,7 @@ def generate_blog_post():
         prompt = f"Write a 1500-word detailed blog post on {topic}. Include history, significance, examples, and expert quotes. Provide an external reference link. Ensure it's engaging and informative."
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[{"role": "system", "content": "You are an expert in minerals, mining, and gemstones."},
                       {"role": "user", "content": prompt}]
         )
