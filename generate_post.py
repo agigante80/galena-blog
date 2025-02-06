@@ -46,43 +46,81 @@ if not os.path.exists(POSTS_DIR):
     os.makedirs(POSTS_DIR)
     print(f"✅ Ensured directory exists: {POSTS_DIR}")
 
-def initialize_csv():
-    """Creates the CSV file and populates it with existing blog posts if it doesn't exist."""
-    if not os.path.exists(CSV_FILE):
-        logging.info("📂 CSV file not found. Creating a new one and scanning existing posts...")
-        print("📂 CSV file not found. Creating a new one and scanning existing posts...")
-        
-        entries = []
-        for filename in os.listdir(POSTS_DIR):
-            if filename.endswith(".md"):
-                date = filename.split("-")[0]
-                title = filename.replace(".md", "").replace("-", " ")
-                post_url = f"{BLOG_URL}/{filename}" if BLOG_URL else "Unknown"
-                entries.append([date, title, "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", post_url])
-        
-        df = pd.DataFrame(entries, columns=["Date", "Title", "Summary", "Word Count", "Topic", "Topic Source", "Execution Time (seconds)", "Post URL"])
-        df.to_csv(CSV_FILE, index=False)
-        logging.info("✅ CSV file initialized with existing posts.")
-        print("✅ CSV file initialized with existing posts.")
+def get_topic():
+    """Fetches the next topic from topics.txt or generates a fallback topic."""
+    if os.path.exists(TOPIC_FILE) and os.path.getsize(TOPIC_FILE) > 0:
+        with open(TOPIC_FILE, "r", encoding="utf-8") as file:
+            topics = file.readlines()
+        if topics:
+            selected_topic = topics[0].strip()
+            with open(TOPIC_FILE, "w", encoding="utf-8") as file:
+                file.writelines(topics[1:])
+            return selected_topic, "Manual"
+    
+    if os.path.exists(CSV_FILE):
+        df = pd.read_csv(CSV_FILE)
+        used_topics = df["Topic"].dropna().unique().tolist()
+    else:
+        used_topics = []
+    
+    fallback_topics = [
+        "The Role of Precious Metals in Technology",
+        "Sustainable Mining Practices",
+        "The History of Gemstone Trade",
+        "How Minerals Impact Global Economies",
+        "The Science Behind Gemstone Formation",
+        "The Future of Mining Technology",
+        "Cultural Significance of Precious Stones",
+        "How Jewelry Trends Evolve Over Time",
+        "The Environmental Impact of Gemstone Mining",
+        "Jewelry in a specific era",
+        "Jewelry in a specific country/area and period of time",
+        "The Importance of a specific mineral in Mining and Jewelry"
+    ]
+    
+    available_topics = [topic for topic in fallback_topics if topic not in used_topics]
+    if not available_topics:
+        available_topics = fallback_topics
+    
+    return random.choice(available_topics), "Fallback"
 
-def send_telegram_notification(message):
-    """Sends a Telegram notification."""
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("⚠️ Telegram credentials are missing. Skipping Telegram notification.")
-        logging.warning("⚠️ Telegram credentials are missing. Skipping Telegram notification.")
-        return
-    
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    
+def generate_blog_post():
+    """Generates a blog post using OpenAI API and saves it."""
+    logging.info("📝 Generating a new blog post...")
     try:
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            logging.info("✅ Telegram notification sent successfully.")
-        else:
-            logging.error(f"⚠️ Failed to send Telegram notification: {response.text}")
+        start_time = time.time()
+        topic, source = get_topic()
+        prompt = f"Write a 1500-word detailed blog post on {topic}. Include history, significance, examples, and expert quotes. Provide an external reference link. Ensure it's engaging and informative."
+        
+        response = client.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=3000
+        )
+        
+        article_content = response.choices[0].message.content.strip()
+        title = topic
+        filename = f"{datetime.now().strftime('%Y-%m-%d')}-{title.replace(' ', '-').lower()}.md"
+        file_path = os.path.join(POSTS_DIR, filename)
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"# {title}\n\n{article_content}")
+        
+        execution_time = round(time.time() - start_time, 2)
+        logging.info(f"✅ Blog post saved: {file_path}")
+        print(f"✅ Blog post saved: {file_path}")
+        
+        df = pd.DataFrame([[datetime.now().strftime('%Y-%m-%d'), title, "Generated", "SEO Keywords", topic, source, len(article_content.split()), execution_time, f"{BLOG_URL}/{filename}" ]], 
+                          columns=["Date", "Title", "Summary", "Keywords", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
+        df.to_csv(CSV_FILE, mode='a', header=not os.path.exists(CSV_FILE), index=False)
+        
+        send_telegram_notification(f"📝 New blog post created: {title}\n\n📖 Read: {BLOG_URL}/{filename}")
+        
+        return file_path
     except Exception as e:
-        logging.error(f"❌ Telegram notification error: {e}")
+        logging.error(f"❌ Blog post generation failed: {e}")
+        print(f"❌ Blog post generation failed: {e}")
+        return None
 
 def main():
     """Main execution function."""
