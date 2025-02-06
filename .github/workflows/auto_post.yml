@@ -21,10 +21,22 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          echo "🔄 Installing dependencies..."
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "✅ Dependencies installed."
 
       - name: Run script to generate AI post
-        run: python generate_post.py
+        run: |
+          echo "📝 Starting AI-generated blog post..."
+          python generate_post.py
+          echo "✅ Post generation completed."
+
+      - name: Debug Git Status
+        run: |
+          echo "🛠 Checking Git status..."
+          git status
 
       - name: Commit and Push Changes
         env:
@@ -32,7 +44,17 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git pull origin main  # Ensure latest changes are pulled
+          git pull origin main --rebase  # Ensures the latest changes are pulled
           git add _posts/
-          git diff --staged --quiet || git commit -m "📝 New AI-generated blog post"
-          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git main
+          if git diff --staged --quiet; then
+            echo "🚫 No new changes to commit."
+          else
+            echo "✅ Committing new blog post..."
+            git commit -m "📝 New AI-generated blog post"
+            git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git main
+            echo "🚀 Changes pushed successfully!"
+          fi
+
+      - name: Confirm Successful Execution
+        run: |
+          echo "✅ Workflow completed successfully!"
