@@ -13,19 +13,26 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 print("✅ Script started...")
 
+def check_env_variable(var_name):
+    """Checks if an environment variable is set and logs the result."""
+    value = os.getenv(var_name)
+    if not value:
+        logging.error(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
+        print(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
+        raise ValueError(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
+    else:
+        logging.info(f"✅ {var_name} successfully loaded.")
+        print(f"✅ {var_name} successfully loaded.")
+    return value
+
+print("✅ Script started...")
+
 # OpenAI API Key (stored in GitHub Secrets)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    logging.error("❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.")
-    print("❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.")
-    raise ValueError("❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.")
-else:
-    logging.info("✅ OPENAI_API_KEY successfully loaded.")
-    print("✅ OPENAI_API_KEY successfully loaded.")
+OPENAI_API_KEY = check_env_variable("OPENAI_API_KEY")
 
 # Telegram API Credentials
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN = check_env_variable("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = check_env_variable("TELEGRAM_CHAT_ID")
 
 BLOG_URL = os.getenv("BLOG_URL")  # Base URL for the blog
 CSV_FILE = "articles_log.csv"
@@ -145,11 +152,14 @@ def generate_blog_post():
                       {"role": "user", "content": prompt}]
         )
 
-        # Ensure the response contains valid content
-        if not response.choices or not response.choices[0].message.content:
-            raise ValueError("❌ OpenAI API did not return a valid response.")
+        # Ensure response contains valid content
+        if not response.choices or not response.choices[0].message.content.strip():
+            raise ValueError("❌ OpenAI API returned an empty response.")
 
         article_content = response.choices[0].message.content.strip()
+        if len(article_content.split()) < 200:  # Ensuring at least 200 words are generated
+            raise ValueError("❌ OpenAI API response is too short.")
+
         title = topic
         execution_time = round(time.time() - start_time, 2)
         word_count = len(article_content.split())
@@ -157,14 +167,12 @@ def generate_blog_post():
         filename = f"{datetime.now().strftime('%Y-%m-%d-%H%M%S')}-{title.replace(' ', '-').lower()}.md"
         file_path = os.path.join(POSTS_DIR, filename)
 
-        # Handle missing BLOG_URL
         post_url = f"{BLOG_URL}/{filename}" if BLOG_URL else "BLOG_URL_NOT_SET"
 
         metadata = (
             "---\n"
             f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
             f"Title: {title}\n"
-            f"Summary: Generated\n"
             f"Topic: {topic}\n"
             f"Topic Source: {source}\n"
             f"Word Count: {word_count}\n"
@@ -173,29 +181,29 @@ def generate_blog_post():
             "---\n\n"
         )
 
-        # Save to Markdown file
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(metadata + article_content)
 
-        # Log to CSV
         log_post_to_csv(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), title, topic, source, word_count, execution_time, post_url)
-
-        # Send Telegram notification
         send_telegram_message(f"✅ New blog post generated: {title}\n{post_url}")
 
         return file_path
 
     except Exception as e:
         logging.error(f"❌ Blog post generation failed: {e}")
-        send_telegram_message("❌ Blog post generation failed!")
+        send_telegram_message(f"❌ Blog post generation failed: {e}")
         return None
 
 
 def main():
+    start_time = time.time()
     logging.info("🔄 Running main() function...")
     print("🚀 Running main script logic...")
     initialize_csv()
     post_path = generate_blog_post()
+    end_time = round(time.time() - start_time, 2)
+    print(f"✅ Main script completed in {end_time} seconds.")
+    logging.info(f"✅ Main script completed in {end_time} seconds.")
     if not post_path:
         print("⚠️ No new blog post was generated. Check logs.")
     else:
