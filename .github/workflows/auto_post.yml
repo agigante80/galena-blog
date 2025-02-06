@@ -20,6 +20,12 @@ jobs:
         with:
           python-version: '3.9'
 
+      - name: Set environment variables
+        run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Debug Environment Variables
+        run: env
+
       - name: Install dependencies
         run: |
           echo "🔄 Installing dependencies..."

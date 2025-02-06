@@ -13,13 +13,17 @@ from email.mime.multipart import MIMEMultipart
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='script.log', filemode='a')
 
+print("✅ Script started...")
+
 # OpenAI API Key (stored in GitHub Secrets)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     logging.error("❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.")
+    print("❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.")
     raise ValueError("❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.")
 else:
     logging.info("✅ OPENAI_API_KEY successfully loaded.")
+    print("✅ OPENAI_API_KEY successfully loaded.")
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")  # Email for notifications
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")  # App password for email sending
@@ -31,8 +35,17 @@ CSV_FILE = "articles_log.csv"
 TOPIC_FILE = "topics.txt"
 GITHUB_REPO_URL = os.getenv("GITHUB_REPO_URL")  # GitHub repository URL for editing topics
 
-# OpenAI Client
+print("🔍 Checking other environment variables...")
+print(f"EMAIL_ADDRESS: {EMAIL_ADDRESS}")
+print(f"RECIPIENT_EMAIL: {RECIPIENT_EMAIL}")
+print(f"SMTP_SERVER: {SMTP_SERVER}")
+print(f"SMTP_PORT: {SMTP_PORT}")
+print(f"BLOG_URL: {BLOG_URL}")
+print(f"GITHUB_REPO_URL: {GITHUB_REPO_URL}")
+
+print("🔄 Initializing OpenAI client...")
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
+print("✅ OpenAI client initialized successfully.")
 
 # List of fallback topics
 TRENDING_TOPICS = [
@@ -64,4 +77,25 @@ def send_email_notification(subject, body):
     except Exception as e:
         logging.error(f"Failed to send email notification: {e}")
 
-# Rest of the script remains unchanged...
+def test_openai_api():
+    """Tests OpenAI API connection before making actual requests."""
+    try:
+        response = client.models.list()
+        print("✅ OpenAI API is working.")
+    except Exception as e:
+        print(f"❌ OpenAI API error: {e}")
+        logging.error(f"❌ OpenAI API error: {e}")
+        raise
+
+def main():
+    """Main execution function."""
+    logging.info("🔄 Running main() function...")
+    print("🚀 Running main script logic...")
+    
+    test_openai_api()
+    
+    # Further implementation of AI-generated posts...
+    print("✅ Main script logic completed.")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,11 @@
+2025-02-06 10:44:50,166 - ERROR - ❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.
+2025-02-06 10:50:02,598 - ERROR - ❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.
+2025-02-06 10:51:49,549 - INFO - ✅ OPENAI_API_KEY successfully loaded.
+2025-02-06 10:52:09,174 - ERROR - ❌ ERROR: OPENAI_API_KEY is missing! Please set it as an environment variable.
+2025-02-06 10:52:24,608 - INFO - ✅ OPENAI_API_KEY successfully loaded.
+2025-02-06 10:58:19,679 - INFO - ✅ OPENAI_API_KEY successfully loaded.
+2025-02-06 10:58:19,773 - INFO - 🔄 Running main() function...
+2025-02-06 10:58:20,264 - INFO - HTTP Request: GET https://api.openai.com/v1/models "HTTP/1.1 200 OK"
+2025-02-06 11:02:56,237 - INFO - ✅ OPENAI_API_KEY successfully loaded.
+2025-02-06 11:02:56,339 - INFO - 🔄 Running main() function...
+2025-02-06 11:02:57,046 - INFO - HTTP Request: GET https://api.openai.com/v1/models "HTTP/1.1 200 OK"
