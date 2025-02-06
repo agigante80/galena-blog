@@ -46,6 +46,14 @@ if not os.path.exists(POSTS_DIR):
     os.makedirs(POSTS_DIR)
     print(f"✅ Ensured directory exists: {POSTS_DIR}")
 
+def initialize_csv():
+    """Creates the CSV file if it doesn't exist."""
+    if not os.path.exists(CSV_FILE):
+        df = pd.DataFrame(columns=["Date", "Title", "Summary", "Keywords", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
+        df.to_csv(CSV_FILE, index=False)
+        print("✅ Initialized CSV file.")
+        logging.info("✅ Initialized CSV file.")
+
 def get_topic():
     """Fetches the next topic from topics.txt or generates a fallback topic."""
     if os.path.exists(TOPIC_FILE) and os.path.getsize(TOPIC_FILE) > 0:
@@ -83,7 +91,7 @@ def get_topic():
         available_topics = fallback_topics
     
     return random.choice(available_topics), "Fallback"
-
+        
 def generate_blog_post():
     """Generates a blog post using OpenAI API and saves it."""
     logging.info("📝 Generating a new blog post...")
@@ -100,21 +108,34 @@ def generate_blog_post():
         
         article_content = response.choices[0].message.content.strip()
         title = topic
+        execution_time = round(time.time() - start_time, 2)
+        word_count = len(article_content.split())
         filename = f"{datetime.now().strftime('%Y-%m-%d')}-{title.replace(' ', '-').lower()}.md"
         file_path = os.path.join(POSTS_DIR, filename)
         
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(f"# {title}\n\n{article_content}")
+        metadata = (
+            "---\n"
+            f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"Title: {title}\n"
+            f"Summary: Generated\n"
+            f"Keywords: SEO Keywords\n"
+            f"Topic: {topic}\n"
+            f"Topic Source: {source}\n"
+            f"Word Count: {word_count}\n"
+            f"Execution Time: {execution_time} seconds\n"
+            f"Post URL: {BLOG_URL}/{filename}\n"
+            "---\n\n"
+        )
         
-        execution_time = round(time.time() - start_time, 2)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(metadata + f"# {title}\n\n{article_content}")
+        
         logging.info(f"✅ Blog post saved: {file_path}")
         print(f"✅ Blog post saved: {file_path}")
         
-        df = pd.DataFrame([[datetime.now().strftime('%Y-%m-%d'), title, "Generated", "SEO Keywords", topic, source, len(article_content.split()), execution_time, f"{BLOG_URL}/{filename}" ]], 
+        df = pd.DataFrame([[datetime.now().strftime('%Y-%m-%d'), title, "Generated", "SEO Keywords", topic, source, word_count, execution_time, f"{BLOG_URL}/{filename}" ]], 
                           columns=["Date", "Title", "Summary", "Keywords", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
         df.to_csv(CSV_FILE, mode='a', header=not os.path.exists(CSV_FILE), index=False)
-        
-        send_telegram_notification(f"📝 New blog post created: {title}\n\n📖 Read: {BLOG_URL}/{filename}")
         
         return file_path
     except Exception as e:
