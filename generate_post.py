@@ -42,20 +42,67 @@ client = openai.OpenAI(api_key=OPENAI_API_KEY)
 print("✅ OpenAI client initialized successfully.")
 
 # Ensure the posts directory exists
-if not os.path.exists(POSTS_DIR):
-    os.makedirs(POSTS_DIR)
-    print(f"✅ Ensured directory exists: {POSTS_DIR}")
+os.makedirs(POSTS_DIR, exist_ok=True)
+print(f"✅ Ensured directory exists: {POSTS_DIR}")
 
 def initialize_csv():
-    """Creates the CSV file if it doesn't exist."""
+    """Creates the CSV file if it doesn't exist, handling missing cases properly."""
     if not os.path.exists(CSV_FILE):
-        df = pd.DataFrame(columns=["Date", "Title", "Summary", "Keywords", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
+        df = pd.DataFrame(columns=["Date", "Title", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
         df.to_csv(CSV_FILE, index=False)
-        print("✅ Initialized CSV file.")
         logging.info("✅ Initialized CSV file.")
+    else:
+        try:
+            df = pd.read_csv(CSV_FILE)  # Validate CSV integrity
+            logging.info("✅ CSV file found and verified.")
+        except Exception as e:
+            logging.error(f"❌ CSV file corrupted, reinitializing. Error: {e}")
+            df = pd.DataFrame(columns=["Date", "Title", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
+            df.to_csv(CSV_FILE, index=False)
+
+
+def log_post_to_csv(date, title, topic, source, word_count, execution_time, post_url):
+    """Logs the generated post metadata to the CSV file."""
+    try:
+        if not os.path.exists(CSV_FILE):
+            initialize_csv()
+
+        df = pd.read_csv(CSV_FILE)
+        new_entry = pd.DataFrame([{
+            "Date": date,
+            "Title": title,
+            "Summary": "Generated",
+            "Keywords": "SEO Keywords",
+            "Topic": topic,
+            "Topic Source": source,
+            "Word Count": word_count,
+            "Execution Time (seconds)": execution_time,
+            "Post URL": post_url
+        }])
+        df = pd.concat([df, new_entry], ignore_index=True)
+        df.to_csv(CSV_FILE, index=False)
+        logging.info("✅ Blog post logged in CSV file.")
+    except Exception as e:
+        logging.error(f"❌ Failed to log post in CSV: {e}")
+
+
+def send_telegram_message(message):
+    """Sends a Telegram message."""
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+        try:
+            response = requests.post(url, data=data)
+            if response.status_code == 200:
+                logging.info("✅ Telegram message sent successfully.")
+            else:
+                logging.error(f"❌ Failed to send Telegram message: {response.text}")
+        except Exception as e:
+            logging.error(f"❌ Error sending Telegram message: {e}")
 
 def get_topic():
     """Fetches the next topic from topics.txt or generates a fallback topic."""
+    print("🔍 Fetching topic...")
     if os.path.exists(TOPIC_FILE) and os.path.getsize(TOPIC_FILE) > 0:
         with open(TOPIC_FILE, "r", encoding="utf-8") as file:
             topics = file.readlines()
@@ -63,13 +110,8 @@ def get_topic():
             selected_topic = topics[0].strip()
             with open(TOPIC_FILE, "w", encoding="utf-8") as file:
                 file.writelines(topics[1:])
+            print(f"🎯 Selected Topic: {selected_topic} (Source: Manual)")
             return selected_topic, "Manual"
-    
-    if os.path.exists(CSV_FILE):
-        df = pd.read_csv(CSV_FILE)
-        used_topics = df["Topic"].dropna().unique().tolist()
-    else:
-        used_topics = []
     
     fallback_topics = [
         "The Role of Precious Metals in Technology",
@@ -85,15 +127,12 @@ def get_topic():
         "Jewelry in a specific country/area and period of time",
         "The Importance of a specific mineral in Mining and Jewelry"
     ]
-    
-    available_topics = [topic for topic in fallback_topics if topic not in used_topics]
-    if not available_topics:
-        available_topics = fallback_topics
-    
-    return random.choice(available_topics), "Fallback"
+    selected_topic = random.choice(fallback_topics)
+    print(f"🎯 Selected Topic: {selected_topic} (Source: Fallback)")
+    return selected_topic, "Fallback"
         
 def generate_blog_post():
-    """Generates a blog post using OpenAI API and saves it."""
+    """Generates a blog post using OpenAI API, saves it, and logs it to CSV."""
     logging.info("📝 Generating a new blog post...")
     try:
         start_time = time.time()
@@ -105,40 +144,62 @@ def generate_blog_post():
             messages=[{"role": "system", "content": "You are an expert in minerals, mining, and gemstones."},
                       {"role": "user", "content": prompt}]
         )
-        
+
+        # Ensure the response contains valid content
+        if not response.choices or not response.choices[0].message.content:
+            raise ValueError("❌ OpenAI API did not return a valid response.")
+
         article_content = response.choices[0].message.content.strip()
         title = topic
         execution_time = round(time.time() - start_time, 2)
         word_count = len(article_content.split())
-        filename = f"{datetime.now().strftime('%Y-%m-%d')}-{title.replace(' ', '-').lower()}.md"
+
+        filename = f"{datetime.now().strftime('%Y-%m-%d-%H%M%S')}-{title.replace(' ', '-').lower()}.md"
         file_path = os.path.join(POSTS_DIR, filename)
-        
+
+        # Handle missing BLOG_URL
+        post_url = f"{BLOG_URL}/{filename}" if BLOG_URL else "BLOG_URL_NOT_SET"
+
         metadata = (
             "---\n"
             f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
             f"Title: {title}\n"
             f"Summary: Generated\n"
-            f"Keywords: SEO Keywords\n"
             f"Topic: {topic}\n"
             f"Topic Source: {source}\n"
             f"Word Count: {word_count}\n"
             f"Execution Time: {execution_time} seconds\n"
-            f"Post URL: {BLOG_URL}/{filename}\n"
+            f"Post URL: {post_url}\n"
             "---\n\n"
         )
-        
+
+        # Save to Markdown file
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(metadata + f"# {title}\n\n{article_content}")
-        
-        logging.info(f"✅ Blog post saved: {file_path}")
-        print(f"✅ Blog post saved: {file_path}")
-        
-        df = pd.DataFrame([[datetime.now().strftime('%Y-%m-%d'), title, "Generated", "SEO Keywords", topic, source, word_count, execution_time, f"{BLOG_URL}/{filename}" ]], 
-                          columns=["Date", "Title", "Summary", "Keywords", "Topic", "Topic Source", "Word Count", "Execution Time (seconds)", "Post URL"])
-        df.to_csv(CSV_FILE, mode='a', header=not os.path.exists(CSV_FILE), index=False)
-        
+            f.write(metadata + article_content)
+
+        # Log to CSV
+        log_post_to_csv(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), title, topic, source, word_count, execution_time, post_url)
+
+        # Send Telegram notification
+        send_telegram_message(f"✅ New blog post generated: {title}\n{post_url}")
+
         return file_path
+
     except Exception as e:
         logging.error(f"❌ Blog post generation failed: {e}")
-        print(f"❌ Blog post generation failed: {e}")
+        send_telegram_message("❌ Blog post generation failed!")
         return None
+
+
+def main():
+    logging.info("🔄 Running main() function...")
+    print("🚀 Running main script logic...")
+    initialize_csv()
+    post_path = generate_blog_post()
+    if not post_path:
+        print("⚠️ No new blog post was generated. Check logs.")
+    else:
+        print("✅ Main script logic completed.")
+
+if __name__ == "__main__":
+    main()
