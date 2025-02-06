@@ -100,10 +100,10 @@ def generate_blog_post():
         topic, source = get_topic()
         prompt = f"Write a 1500-word detailed blog post on {topic}. Include history, significance, examples, and expert quotes. Provide an external reference link. Ensure it's engaging and informative."
         
-        response = client.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=3000
+            messages=[{"role": "system", "content": "You are an expert in minerals, mining, and gemstones."},
+                      {"role": "user", "content": prompt}]
         )
         
         article_content = response.choices[0].message.content.strip()
@@ -142,19 +142,3 @@ def generate_blog_post():
         logging.error(f"❌ Blog post generation failed: {e}")
         print(f"❌ Blog post generation failed: {e}")
         return None
-
-def main():
-    """Main execution function."""
-    logging.info("🔄 Running main() function...")
-    print("🚀 Running main script logic...")
-    
-    initialize_csv()
-    
-    post_path = generate_blog_post()
-    if not post_path:
-        print("⚠️ No new blog post was generated. Check logs.")
-    else:
-        print("✅ Main script logic completed.")
-
-if __name__ == "__main__":
-    main()
