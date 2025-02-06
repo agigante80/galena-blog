@@ -34,6 +34,7 @@ BLOG_URL = os.getenv("BLOG_URL")  # Base URL for the blog
 CSV_FILE = "articles_log.csv"
 TOPIC_FILE = "topics.txt"
 GITHUB_REPO_URL = os.getenv("GITHUB_REPO_URL")  # GitHub repository URL for editing topics
+POSTS_DIR = "_posts"
 
 print("🔍 Checking other environment variables...")
 print(f"EMAIL_ADDRESS: {EMAIL_ADDRESS}")
@@ -46,6 +47,11 @@ print(f"GITHUB_REPO_URL: {GITHUB_REPO_URL}")
 print("🔄 Initializing OpenAI client...")
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 print("✅ OpenAI client initialized successfully.")
+
+# Ensure the posts directory exists
+if not os.path.exists(POSTS_DIR):
+    os.makedirs(POSTS_DIR)
+    print(f"✅ Ensured directory exists: {POSTS_DIR}")
 
 # List of fallback topics
 TRENDING_TOPICS = [
@@ -63,6 +69,11 @@ TRENDING_TOPICS = [
 
 def send_email_notification(subject, body):
     """Sends an email notification."""
+    if not EMAIL_ADDRESS or not EMAIL_PASSWORD or not RECIPIENT_EMAIL:
+        print("⚠️ Email credentials are missing. Skipping email notification.")
+        logging.warning("⚠️ Email credentials are missing. Skipping email notification.")
+        return
+    
     msg = MIMEMultipart()
     msg["Subject"] = subject
     msg["From"] = EMAIL_ADDRESS
@@ -87,6 +98,27 @@ def test_openai_api():
         logging.error(f"❌ OpenAI API error: {e}")
         raise
 
+def generate_blog_post():
+    """Generates and saves a blog post."""
+    try:
+        topic = random.choice(TRENDING_TOPICS)
+        filename = f"{datetime.now().strftime('%Y-%m-%d')}-{topic.replace(' ', '-').lower()}.md"
+        file_path = os.path.join(POSTS_DIR, filename)
+        
+        # Simulate AI-generated content
+        article_content = f"# {topic}\n\nThis is an AI-generated article about {topic}."
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(article_content)
+        
+        logging.info(f"✅ Blog post saved to {file_path}")
+        print(f"✅ Blog post saved to {file_path}")
+        return file_path
+    except Exception as e:
+        logging.error(f"❌ Failed to generate blog post: {e}")
+        print(f"❌ Failed to generate blog post: {e}")
+        return None
+
 def main():
     """Main execution function."""
     logging.info("🔄 Running main() function...")
@@ -94,8 +126,14 @@ def main():
     
     test_openai_api()
     
-    # Further implementation of AI-generated posts...
-    print("✅ Main script logic completed.")
+    post_path = generate_blog_post()
+    if not post_path:
+        error_msg = "⚠️ No new blog post was generated. Please check the logs."
+        logging.warning(error_msg)
+        print(error_msg)
+        send_email_notification("⚠️ Blog Post Generation Failed", error_msg)
+    else:
+        print("✅ Main script logic completed.")
 
 if __name__ == "__main__":
     main()
