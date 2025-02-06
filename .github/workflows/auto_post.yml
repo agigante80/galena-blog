@@ -2,30 +2,30 @@ name: Auto Publish AI Blog Post
 
 on:
   schedule:
-    - cron: "0 8 * * 1"  # Runs every Monday at 8 AM UTC (London time)
+    - cron: '0 8 * * 1'  # Runs every Monday at 8 AM London time
   workflow_dispatch:  # Allows manual execution
 
 jobs:
-  run_script:
+  generate-post:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Enables write access to push new blog posts
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set Up Python
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: "3.9"
+          python-version: '3.9'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Python Script
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Run script to generate AI post
         run: python generate_post.py
-        
+
       - name: Commit and Push Changes
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -36,4 +36,3 @@ jobs:
           git add _posts/
           git diff --staged --quiet || git commit -m "📝 New AI-generated blog post"
           git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git main
-
