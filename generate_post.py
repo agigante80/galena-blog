@@ -11,21 +11,21 @@ import requests
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='script.log', filemode='a')
 
-print("✅ Script started...")
+logging.info("✅ Script started...")
 
 def check_env_variable(var_name):
     """Checks if an environment variable is set and logs the result."""
     value = os.getenv(var_name)
     if not value:
         logging.error(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
-        print(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
+        logging.info(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
         raise ValueError(f"❌ ERROR: {var_name} is missing! Please set it as an environment variable.")
     else:
         logging.info(f"✅ {var_name} successfully loaded.")
-        print(f"✅ {var_name} successfully loaded.")
+        logging.info(f"✅ {var_name} successfully loaded.")
     return value
 
-print("✅ Script started...")
+logging.info("✅ Script started...")
 
 # OpenAI API Key (stored in GitHub Secrets)
 OPENAI_API_KEY = check_env_variable("OPENAI_API_KEY")
@@ -40,17 +40,17 @@ TOPIC_FILE = "topics.txt"
 GITHUB_REPO_URL = os.getenv("GITHUB_REPO_URL")  # GitHub repository URL for editing topics
 POSTS_DIR = "_posts"
 
-print("🔍 Checking other environment variables...")
-print(f"BLOG_URL: {BLOG_URL}")
-print(f"GITHUB_REPO_URL: {GITHUB_REPO_URL}")
+logging.info("🔍 Checking other environment variables...")
+logging.info(f"BLOG_URL: {BLOG_URL}")
+logging.info(f"GITHUB_REPO_URL: {GITHUB_REPO_URL}")
 
-print("🔄 Initializing OpenAI client...")
+logging.info("🔄 Initializing OpenAI client...")
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
-print("✅ OpenAI client initialized successfully.")
+logging.info("✅ OpenAI client initialized successfully.")
 
 # Ensure the posts directory exists
 os.makedirs(POSTS_DIR, exist_ok=True)
-print(f"✅ Ensured directory exists: {POSTS_DIR}")
+logging.info(f"✅ Ensured directory exists: {POSTS_DIR}")
 
 def initialize_csv():
     """Creates the CSV file if it doesn't exist, handling missing cases properly."""
@@ -147,7 +147,7 @@ def generate_blog_post():
         prompt = f"Write a 1500-word detailed blog post on {topic}. Include history, significance, examples, and expert quotes. Provide an external reference link. Ensure it's engaging and informative."
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": "You are an expert in minerals, mining, and gemstones."},
                       {"role": "user", "content": prompt}]
         )
@@ -186,6 +186,7 @@ def generate_blog_post():
 
         log_post_to_csv(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), title, topic, source, word_count, execution_time, post_url)
         send_telegram_message(f"✅ New blog post generated: {title}\n{post_url}")
+        logging.error(f"✅ New blog post generated: \n{title}\n{topic}\n{source}\n{post_url}\nend\n")
 
         return file_path
 
