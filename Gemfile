@@ -1,3 +1,3 @@
 source "https://rubygems.org"
 gem "github-pages", group: :jekyll_plugins
-gem "feeling-responsive", github: "phlow/feeling-responsive"
+gem "jekyll-theme-feeling-responsive", github: "Phlow/feeling-responsive"
