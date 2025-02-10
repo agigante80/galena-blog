@@ -38,7 +38,7 @@ BLOG_URL = os.getenv("BLOG_URL")  # Base URL for the blog
 CSV_FILE = "articles_log.csv"
 TOPIC_FILE = "topics.txt"
 GITHUB_REPO_URL = os.getenv("GITHUB_REPO_URL")  # GitHub repository URL for editing topics
-POSTS_DIR = "_posts"
+POSTS_DIR = "_posts/design"
 
 logging.info("🔍 Checking other environment variables...")
 logging.info(f"BLOG_URL: {BLOG_URL}")
