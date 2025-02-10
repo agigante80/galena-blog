@@ -8,13 +8,15 @@
 #                                                 /____/
 #
 # Title of your website
-title: 'Galena Blog - Exploring the World of Minerals, Mining, and Gemstones'
+title: Galena Blog - Exploring the World of Minerals, Mining, and Gemstones
 
 # The slogan describes your website and is used on homepage in <title> and other important places
-slogan: 'A Flexible Theme for Jekyll'
+slogan: A Flexible Theme for Jekyll
 
 # The description is used on homepage and in the footer to quickly describe your website. Use a maximum of 150 characters for SEO-purposes.
-description: '»Welcome to Galena Blog, your go-to destination for in-depth insights into the fascinating world of minerals, mining, gemstones, and jewelry. Whether you're a geology enthusiast, a jewelry lover, or simply curious about the natural world, our blog has something for you.'
+description: |
+  »Welcome to Galena Blog, your go-to destination for in-depth insights into the fascinating world of minerals, mining, gemstones, and jewelry. 
+  Whether you're a geology enthusiast, a jewelry lover, or simply curious about the natural world, our blog has something for you.
 
 # The credits show up in the includes/_footer.html – It would be nice of you to leave a link to Phlow or Feeling Responsive as a thank you :)
 credits: '<p>Created with &hearts; by <a href="http://phlow.de/">Phlow</a> with <a href="http://jekyllrb.com/" target="_blank">Jekyll</a> based on <a href="http://phlow.github.io/feeling-responsive/">Feeling Responsive</a>.</p>'
